@@ -9,11 +9,13 @@ const filterIcon = document.getElementById('filter-icon');
 const all = document.getElementById('all');
 const today = document.getElementById('today');
 const upcoming = document.getElementById('upcoming');
+const completed = document.getElementById('completed');
+const dateFilter = document.getElementById('date-filter');
 const taskContainer = JSON.parse(localStorage.getItem("taskData")) || [];
 const formattedDate = new Date().toISOString().slice(0,10);
 let isFiltered = false;
 
-const addTaskUI = () => {
+function addTaskUI() {
   const taskObj = { id:`task-${Date.now()}` }
   dialog.insertAdjacentHTML("beforeend", `
     <div class="container">
@@ -27,12 +29,7 @@ const addTaskUI = () => {
       </div>
       <button id="finalize-task">Add Task</button>
     </div>
-    <button id="close-dialog" onclick="
-      dialog.close(); 
-      dialog.classList.remove('dialog-style'); 
-      dialog.innerHTML = ''; 
-      newTaskBtn.classList.remove('hidden');
-    ">
+    <button id="close-dialog">
       <img src="../images/close-circle.svg">
     </button>
   `);
@@ -43,13 +40,20 @@ const addTaskUI = () => {
 
   myDialog.classList.add('dialog-style');
   newTaskBtn.classList.add('hidden');
-
+  document.getElementById('close-dialog').onclick = closeDialog;
   addTaskBtn.addEventListener('click', ()=>{
     return taskAdder(taskObj, taskName, taskDate);
   });
 };
 
-const taskAdder = (roundObj, taskName, taskDate) => {
+function closeDialog(){
+  dialog.close();
+  dialog.classList.remove('dialog-style');
+  dialog.innerHTML = '';
+  newTaskBtn.classList.remove('hidden');
+}
+
+function taskAdder(roundObj, taskName, taskDate) {
   if(!roundObj.title && !roundObj.date){
     roundObj['title'] = taskName.value;
     roundObj['date'] = taskDate.value;
@@ -60,17 +64,13 @@ const taskAdder = (roundObj, taskName, taskDate) => {
   } else {
     taskContainer.push(roundObj);
     localStorage.setItem("taskData", JSON.stringify(taskContainer));
-    dialog.close();
-    dialog.innerHTML = '';
-    dialog.classList.remove('dialog-style');
-    newTaskBtn.classList.remove('hidden');
     isFiltered = false;
     renderTaskUI(roundObj, isFiltered);
+    closeDialog();
   }
 }
 
-const renderTaskUI = (roundObj, isFiltered, task) => {
-
+function renderTaskUI (roundObj, isFiltered, task){
   if(isFiltered === true){
     taskData.innerHTML = '';
   }
@@ -91,7 +91,7 @@ const renderTaskUI = (roundObj, isFiltered, task) => {
 
   const deleteBtn = document.querySelectorAll('.delete-icon');
   const checkBox = document.querySelectorAll('.custom-checkbox');
-  checkBox.forEach(el=>{
+  [...checkBox].forEach(el=>{
     el.addEventListener('click', ()=>{
       el.classList.toggle('checked');
       el.parentElement.querySelector('h1').classList.toggle('completed');
@@ -100,8 +100,8 @@ const renderTaskUI = (roundObj, isFiltered, task) => {
 
   deleteBtn.forEach(btn=>{
     btn.addEventListener('click',()=>{
-    deleteTask(btn);
-  });
+      deleteTask(btn);
+    });
   });
 };
 
@@ -117,10 +117,6 @@ const filterDialogUI = () => {
     <div class="date">
       <div class="filter-header">
         <p>Filter</p>
-        <div class="all-choice">
-          <label id="all">All</label>
-          <input type="checkbox" class="checkbox" id="all">
-        </div>
       </div>
       <p class="filter-header">Tasks will be rendered based on the preference and the specified date</p>
       <div class="rads">
@@ -136,117 +132,121 @@ const filterDialogUI = () => {
         <button id="cancel" class="d-buttons">Cancel</button>
       </div>
     </div>
-  `;
+  `;  
+
+  console.log(filterDialog.querySelectorAll('.radio-buttons'));
   const radioButtons = document.querySelectorAll('.radio-buttons');
   const filterDate = document.getElementById('filter-date');
   const dButtons = document.querySelectorAll('.d-buttons');
-  const allCheckBox = document.querySelector('.checkbox');
-
-  // closeOpenDialog(dButtons, filterDate,allCheckBox);
+  
   addChecked(radioButtons,dButtons,filterDate);
   callFuns(dButtons,radioButtons,filterDate);
 };
 
-function addChecked(buttons,dButtons,filterDate){
-  // console.log(buttons);
-  
+function addChecked(buttons){  
   buttons.forEach(button=>{
     button.onclick = ()=>{
       buttons.forEach(button=>{
-      button.classList.remove('checked');
-    });
+        button.classList.remove('checked');
+      });
       button.classList.add('checked');
-  }});
-
-  
+  }
+})
 }
 
-const callFuns = (buttons,radBtns,filterDate)=>{
-  
-  buttons[0].onclick = ()=>{
+function callFuns(buttons,radBtns,filterDate){
+  buttons[0].addEventListener('click',()=>{
     radBtns.forEach(button=>{
     if(button.classList.contains('checked') ){
       switch(button.id){
         case 'before':
-          beforeTasks(filterDate.value);
+          filteredTasks(filterDate.value,'<');
           break;
         case 'after':
-          upcomingTasks(filterDate.value);
+          filteredTasks(filterDate.value,'>');
           break;
         case 'at':
-          todayTask(filterDate.value);
+          filteredTasks(filterDate.value,'=');
           break;
       }
-    };
+    }});
   });
-  };
-
   buttons.forEach(button=>button.onclick = ()=>{filterDialog.close()});
 }
 
-function allTasks(){
-  if(taskContainer.length){
-    isFiltered = false;
-    taskContainer.forEach(task=>{
-      taskContainer[0] === task ? isFiltered = true : isFiltered = false;
-      renderTaskUI(task,isFiltered,null);
-    })
-  };
-}
+function filteredTasks(filterDate,type){
 
-function todayTask(filterDate){
-  filterDialog.close();
-  const todayTasks = taskContainer.filter(task=>task.date === filterDate);
-  if(!todayTasks.length){
-    alert('there are no tasks for today');
-    allTasks();
-  }else{
-    todayTasks.forEach(task=>{
-    todayTasks[0] === task ? isFiltered = true : isFiltered = false;
-    renderTaskUI(null,isFiltered,task);
-    });
+  let taskFiltered;
+  switch(type){
+    case '>':
+      taskFiltered = taskContainer.filter(task=>task.date >filterDate);
+      break;
+    case '<':
+      taskFiltered = taskContainer.filter(task=>task.date < filterDate);
+      break;
+    case '=':
+      taskFiltered = taskContainer.filter(task=>task.date === filterDate);
+      break;
+    default:
+      taskFiltered = taskContainer;
+      break;
   }
-};
 
-function beforeTasks(filterDate){
-  const beforeTasks = taskContainer.filter(task=>task.date < filterDate);
-  
-  beforeTasks.forEach(task=>{
-    beforeTasks[0] === task ? isFiltered = true : isFiltered = false;
+  taskFiltered.forEach(task=>{
+    taskFiltered[0] === task ? isFiltered = true : isFiltered = false;
     renderTaskUI(null,isFiltered,task);
-  });
+  })
+  // return taskFiltered;
 }
 
-function upcomingTasks(filterDate){
-  const upcomingTasks = taskContainer.filter(task=>task.date>filterDate);
-  upcomingTasks.forEach(task=>{
-    upcomingTasks[0] === task ? isFiltered = true:isFiltered = false;
-    renderTaskUI(null,isFiltered,task);
+function completedTasks(){
+  
+  let completed = document.querySelectorAll('.custom-checkbox');
+  completed = [...completed]
+  .filter(el => el.classList.contains('checked'))
+  .map(el=>el.parentElement.parentElement.id);
+  
+  completed = completed.map(el=>{
+    return taskContainer.filter(task=>task.id===el);
   });
-  filterDialog.close();
-} 
 
-//calling section
+  if(!completed){
+    alert("there are no completed tasks dudde wake up!");
+  }
+
+  completed.forEach(task=>{
+    completed[0] === task ? isFiltered = true : isFiltered = false;
+    renderTaskUI(null,isFiltered,task[0]);
+  });
+}
 
 newTaskBtn.addEventListener('click', ()=>{
   addTaskUI();
   myDialog.showModal();
 });
 
+completed.addEventListener('click',()=>{
+  completedTasks();
+})
+
 filterIcon.addEventListener('click', ()=>{
   filterDialogUI();
 });
 
+dateFilter.addEventListener('click',()=>{
+  filterDialogUI();
+}) 
+
 today.addEventListener('click',()=>{
-  todayTask(formattedDate);
+  filteredTasks(formattedDate,'=');
 });
 
 upcoming.addEventListener('click',()=>{
-  upcomingTasks(formattedDate);
+  filteredTasks(formattedDate,'>');
 })
 
 all.addEventListener('click',()=>{
-  allTasks();
+  filteredTasks();
 });
 
 if(taskContainer.length){
