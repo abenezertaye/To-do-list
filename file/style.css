@@ -42,10 +42,6 @@ nav{
   border-bottom:1px solid rgba(206, 204, 204, 0.712);
 }
 
-.icons{
-  width:20px;
-}
-
 #main-container{
   min-height: 70%;
   width:calc(60%);
